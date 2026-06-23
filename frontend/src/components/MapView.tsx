@@ -69,6 +69,8 @@ export default function MapView({
     [cells],
   );
 
+  // DeckGL layers are expensive; memoizing keeps map pan/zoom smooth after
+  // several shift changes, selections, and beat-plan updates.
   const layers: any[] = useMemo(
     () =>
       [

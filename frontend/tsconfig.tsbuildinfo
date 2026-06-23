@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/types.ts","./src/components/aboutmodal.tsx","./src/components/deploypanel.tsx","./src/components/hotspotpanel.tsx","./src/components/kpiheader.tsx","./src/components/mapview.tsx","./src/components/overviewpanel.tsx","./src/components/ui.tsx","./src/lib/viz.ts"],"version":"5.9.3"}

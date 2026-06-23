@@ -39,6 +39,8 @@ export default function App() {
   const [mapLoading, setMapLoading] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [err, setErr] = useState(false);
+  // Heatmap calls are keyed by layer + shift. Aborting stale requests prevents
+  // rapid shift clicks from painting old cells over the latest selection.
   const heatmapCache = useRef(new Map<string, Cell[]>());
   const heatmapRequest = useRef(0);
 

@@ -19,6 +19,8 @@ async function request<T>(
   timeoutMs = 15000,
 ): Promise<T> {
   let lastError: unknown;
+  // Callers can abort stale map requests while this helper still enforces
+  // its own timeout and Render wake-up retries for normal requests.
   const externalSignal = init?.signal;
   const { signal: _signal, ...fetchInit } = init ?? {};
 

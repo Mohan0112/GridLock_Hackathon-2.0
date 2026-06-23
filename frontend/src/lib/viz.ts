@@ -64,5 +64,3 @@ export const fmt = (n: number) => n.toLocaleString("en-IN");
 
 export const fmt1 = (n: number) =>
   n.toLocaleString("en-IN", { maximumFractionDigits: 1 });
-
-export const TIME_BANDS = ["night", "morning", "afternoon", "evening", "late"];

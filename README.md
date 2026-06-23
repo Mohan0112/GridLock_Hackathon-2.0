@@ -1,198 +1,146 @@
-# Gridlock — Parking-Intelligence Engine
+# Gridlock 2.0
 
-**AI-driven parking intelligence for the Bengaluru Traffic Police.** Detect illegal-parking
-hotspots, quantify their impact on traffic flow, surface the under-enforced "blind spots" the
-current patrol misses, and turn it all into a ready-to-deploy beat plan.
+Gridlock 2.0 is a parking-intelligence prototype for Bengaluru Traffic Police.
+It turns parking violation records into an operational dashboard for finding
+traffic-impacting hotspots, under-watched blind spots, and shift-specific patrol
+plans.
 
-Built for **Gridlock Hackathon 2.0 — Theme 1: Poor Visibility on Parking-Induced Congestion.**
+The submitted source includes a precomputed DuckDB database at
+`backend/data/gridlock.duckdb`, so reviewers can run the app without rebuilding
+the analytics pipeline from the raw dataset.
 
-> Runs entirely on the provided violation dataset. No external data sources, no paid APIs.
+## What The App Shows
 
----
+- **Introduction**: short explanation of the workflow and tap-to-explain KPIs.
+- **Overview**: enforcement-gap scatter, violation trend, forecast summary,
+  repeat-offender signal, and clickable hotspot/blind-spot lists.
+- **Map**: 3D H3 hex map with impact and density layers, blind-spot overlay,
+  hotspot drilldown, and patrol plan generation in one shared workspace.
 
-## What it answers (the three BTP pain points)
+## Core Ideas
 
-| BTP pain point | Gridlock answer |
-|---|---|
-| Enforcement is reactive / patrol-based | Proactive, ranked hotspots + a generated beat plan for the next shift |
-| No view of violations *vs* congestion impact | A dual-layer hex map: violation **density** and a transparent **Congestion Impact Score** |
-| Hard to prioritise enforcement zones | Effort-adjusted ranking + statistically-significant clusters + blind-spot candidates |
+- **Hotspots**: statistically significant H3 cells ranked by violation pressure
+  and congestion impact.
+- **Blind spots**: high-yield cells that are under-watched after adjusting for
+  officer-days.
+- **Congestion Impact Score**: a 0-100 score built from volume, road severity,
+  cluster significance, persistence, and peak-hour overlap.
+- **Beat plan**: a greedy spatial optimizer that selects high-impact cells while
+  keeping teams spread across the city.
+- **Forecast**: a lightweight per-station next-day load estimate with safe
+  fallback metrics for hosted deployments.
 
----
+## Repository Layout
 
-## The idea that makes it defensible
+```text
+backend/
+  app/
+    api/main.py              FastAPI service and static frontend serving
+    analytics/
+      compute.py             Analytics orchestrator
+      hotspots.py            Gi* hotspot and blind-spot detection
+      impact.py              Congestion impact scoring
+      forecast.py            Per-station forecast
+      optimize.py            Beat-plan optimizer
+    ingestion/               Data cleaning and enrichment pipeline
+    config.py                Shared assumptions and thresholds
+  data/gridlock.duckdb       Precomputed demo database
+  requirements.txt           Python dependencies
 
-The data records **where tickets were written**, which is really **where patrols already go**. Ranking by
-raw count just re-finds the existing beat. Gridlock corrects for that:
+frontend/
+  src/
+    App.tsx                  Main app state and module routing
+    pages/                   Introduction, Overview, and Map modules
+    components/              Map, panels, modal, nav, and shared UI
+    api.ts                   Frontend API client with retries/cancellation
 
-- **Effort adjustment** — violations ÷ *officer-days* (distinct officer × day) per cell and per station.
-  This separates "busy because it's watched" from "high-yield per visit".
-- **Blind-spot detection** — cells with **below-median volume but above-median yield per visit** (and
-  enough visits to trust the rate) → *candidate* zones flagged "send a patrol to confirm". Closes the loop.
-- **Statistical significance** — a local **Getis-Ord Gi\*** z-score over the H3 grid, so a hotspot is "a real
-  cluster", not a single high cell.
-
-> Because the dataset is simulated, findings are framed as *"the method corrects a real enforcement bias"*,
-> not as discoveries about the real city.
-
----
-
-## Capabilities (all five MVP requirements + analytics depth)
-
-1. **Hotspot detection** — Gi\* significance + effort-adjusted intensity over ~16.7k H3 cells.
-2. **Congestion Impact Score** — transparent 0–100 composite, with per-component breakdown.
-3. **Dual-layer heatmap** — 3-D extruded hexes (height = impact) with a cyan blind-spot overlay.
-4. **Enforcement prioritisation** — station effort quadrants + ranked blind spots.
-5. **Beat-plan generation** — pick K spatially-spread cells maximising expected impact for a shift.
-6. **Next-day load forecast** — per-station, validated on a held-out fortnight.
-
-### Congestion Impact Score
-
-`impact = 100 · Σ weightₖ · normalisedₖ` — components and default weights (in `config.py`):
-
-| Component | Weight | Meaning |
-|---|---|---|
-| Volume (log) | 0.30 | how many violations, with diminishing returns |
-| Road severity | 0.30 | main-road / crossing × vehicle footprint (lane blockage) |
-| Cluster significance | 0.15 | Gi\* strength (real cluster vs noise) |
-| Persistence | 0.15 | active across many distinct days (chronic vs one-off) |
-| Peak overlap | 0.10 | concentrated in the morning peak (always-on chokepoint) |
-
-Every component's point-contribution is stored per cell, so the dashboard can explain *why* a spot scored high.
-
----
-
-## Architecture
-
-```
-                 ┌──────────────────────────────────────────────┐
-  violations CSV │  INGEST  clean · tag-explode · IST time       │
-   (≈300k rows)  │          H3 r9/r10/r11 · weights · confidence │
-                 └───────────────┬──────────────────────────────┘
-                                 ▼  DuckDB (embedded, one file)
-        ┌────────────────────────────────────────────────────────┐
-        │ ANALYTICS                                                │
-        │  Gi* hotspots · effort adj. · blind spots   (hotspots.py)│
-        │  Congestion Impact Score                    (impact.py)  │
-        │  per-station next-day forecast              (forecast.py)│
-        │  greedy beat-plan optimiser                 (optimize.py)│
-        └───────────────┬─────────────────────────────────────────┘
-                        ▼  tables + JSON artifacts
-        ┌────────────────────────────────────────────────────────┐
-        │ FastAPI  /api/kpis /heatmap /hotspot /station-effort     │
-        │          /forecast /beat-plan  + /ingest (live seam)     │
-        │          serves the built frontend at /                  │
-        └───────────────┬─────────────────────────────────────────┘
-                        ▼
-        React + deck.gl (H3 hexagons) + MapLibre + Recharts
+Dockerfile                   Production build for Render or local Docker
+render.yaml                  Render web-service configuration
+DEPLOY.md                    Render deployment notes
 ```
 
-**Stack** — FastAPI · DuckDB · pandas/numpy · H3 · scikit-learn · APScheduler ·
-React + Vite + TypeScript · deck.gl + react-map-gl · MapLibre GL · Recharts · Tailwind.
+## Run Locally
 
-Everything heavy is intentionally light-weight and swappable: Gi\* is hand-rolled (drop-in: PySAL),
-the forecaster is a gradient-boosting + seasonal ensemble (drop-in: LightGBM), the optimiser is greedy
-(drop-in: OR-Tools CP-SAT). 300k rows do not need Spark/Postgres/Kafka.
+### Terminal 1: backend
 
----
-
-## Run it
-
-### Option A — instant (prebuilt store + frontend included)
-
-```bash
+```powershell
 cd backend
 python -m pip install -r requirements.txt
-python -m uvicorn app.api.main:app --port 8000
-# open http://localhost:8000
+python -m uvicorn app.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-The shipped `data/gridlock.duckdb` and `frontend/dist/` mean the full UI comes up immediately on real data.
+Health check:
 
-### Option B — build from the raw dataset
-
-```bash
-cd backend
-python -m pip install -r requirements.txt
-python -m scripts.build_foundation /path/to/violations.csv   # clean + enrich -> DuckDB
-python -m app.analytics.compute                              # hotspots, impact, forecast, beat plan
-python -m uvicorn app.api.main:app --port 8000
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/health
 ```
 
-### Option C — Docker (single self-contained container)
+Expected values include `status: ok`, about `299950` violations, and `3812`
+hotspot rows.
 
-```bash
-# place your dataset at ./backend/data/raw/violations.csv (only needed if no DB yet)
-docker compose up --build
-# open http://localhost:8000
+### Terminal 2: frontend
+
+```powershell
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-The container builds the foundation + analytics on first boot if the store is absent, then serves.
+Open:
 
-### Frontend dev (hot reload)
-
-```bash
-cd frontend && npm install && npm run dev   # proxies /api to :8000
+```text
+http://127.0.0.1:5173/
 ```
 
-### Tests
+## Docker Run
 
-```bash
+```powershell
+docker build -t gridlock-2 .
+docker run --rm -p 8000:8000 gridlock-2
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Tests
+
+```powershell
 cd backend
 python -m pytest -q
 ```
 
----
+Frontend production build:
 
-## API
-
-| Method | Endpoint | Returns |
-|---|---|---|
-| GET | `/api/kpis` | headline counts + highest-impact zone + under-enforced stations |
-| GET | `/api/heatmap?layer=impact\|density\|blindspot` | cells for the map layer |
-| GET | `/api/trend` | daily city-wide parking violation counts |
-| GET | `/api/hotspot/{cell}` | drill-down: impact breakdown, vehicle mix, tags, hourly |
-| GET | `/api/station-effort` | per-station volume vs yield + quadrant |
-| GET | `/api/forecast` | holdout metrics + per-station next-day load |
-| POST | `/api/beat-plan` | `{teams, time_band, dow}` → ranked, spread beats |
-| POST | `/api/ingest` | upload a CSV → append unseen rows → recompute (the "live update" seam) |
-
----
-
-## Production seams (built, not faked)
-
-- **Ingestion** is idempotent and append-only (`append_file` adds only unseen IDs) — the same path a nightly
-  BTP feed would use. `/api/ingest` runs the append + recompute in a **fresh subprocess** so the long-lived
-  server never blocks and the embedded DB stays single-writer-safe.
-- **Nightly recompute** is wired via APScheduler (2 AM cron); in production swap the seed step for a live pull.
-- **Demo "live update"** is honest: replay a held-out month and watch the forecast validate, rather than
-  pretending a public real-time API exists.
-
----
-
-## Layout
-
+```powershell
+cd frontend
+npm install
+npm run build
 ```
-backend/
-  app/
-    config.py                 # every tunable assumption (bbox, H3 res, weights, thresholds)
-    db.py                     # DuckDB schema
-    ingestion/pipeline.py     # load → clean → enrich → write (+ append-only ingest)
-    analytics/
-      hotspots.py             # Gi* + effort adjustment + blind spots
-      impact.py               # Congestion Impact Score (+ explanations)
-      forecast.py             # per-station next-day ensemble forecast
-      optimize.py             # greedy beat-plan optimiser (haversine spread)
-      compute.py              # orchestrator → tables + JSON artifacts
-    api/main.py               # FastAPI service (+ serves the frontend)
-    ingest_job.py             # subprocess entry for append + recompute
-  scripts/build_foundation.py # Phase 1 entrypoint + validation report
-  data/gridlock.duckdb        # embedded store (prebuilt)
-frontend/
-  src/
-    App.tsx                   # layout, state, map overlays, tabbed rail
-    components/MapView.tsx     # deck.gl extruded H3 map + blind-spot overlay + beats
-    components/{KpiHeader,OverviewPanel,HotspotPanel,DeployPanel}.tsx
-    api.ts, types.ts, lib/viz.ts
-Dockerfile · docker-compose.yml
-```
+
+## Deployment Notes
+
+The hosted app is intentionally read-mostly. `backend/data/gridlock.duckdb` is
+baked into the image so Render does not recompute analytics on a small instance.
+The Docker entrypoint binds to Render's `$PORT` and starts Uvicorn.
+
+Useful Render settings:
+
+- Runtime: Docker
+- Health check path: `/api/health`
+- `GRIDLOCK_READ_ONLY=1`
+- `GRIDLOCK_ENABLE_MUTATIONS=0`
+- `GRIDLOCK_ENABLE_SCHEDULER=0`
+- `GRIDLOCK_DUCKDB_THREADS=1`
+- `GRIDLOCK_DUCKDB_MEMORY_LIMIT=256MB`
+
+## Notes For Reviewers
+
+- No external paid APIs are required.
+- Frontend map tiles come from public CARTO basemap styles.
+- The source package intentionally excludes `node_modules`, virtual
+  environments, build output, logs, caches, and temporary recordings.
+- The database is included because it is needed for an instant demo and is below
+  the source upload size limit when zipped.
