@@ -53,6 +53,15 @@ def test_beat_plan():
     assert len(r.json()["plan"]) <= 3
 
 
+def test_forecast_metrics_have_defaults():
+    r = client.get("/api/forecast")
+    assert r.status_code == 200
+    metrics = r.json()["metrics"]
+    for key in ["model_mae", "baseline_mae", "improvement_pct", "holdout_days"]:
+        assert key in metrics
+        assert metrics[key] is not None
+
+
 def test_impact_bounds():
     for cell in client.get("/api/heatmap?layer=impact").json():
         assert 0 <= cell["impact_score"] <= 100

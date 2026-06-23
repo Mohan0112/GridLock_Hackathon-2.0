@@ -51,6 +51,12 @@ export default function OverviewPanel({
     .sort((a, b) => b.per_officer_day - a.per_officer_day);
   const maxTrend = Math.max(1, ...trend.map((p) => p.n));
   const trendInterval = Math.max(0, Math.floor(trend.length / 4));
+  const forecastMetrics = {
+    model_mae: fc?.metrics?.model_mae ?? 0,
+    baseline_mae: fc?.metrics?.baseline_mae ?? 0,
+    improvement_pct: fc?.metrics?.improvement_pct ?? 0,
+    holdout_days: fc?.metrics?.holdout_days ?? 0,
+  };
 
   return (
     <div className="space-y-3.5">
@@ -211,18 +217,18 @@ export default function OverviewPanel({
         <div className="flex items-center justify-between">
           <Eyebrow>Next-day load forecast</Eyebrow>
           {fc && (
-            <Chip tone={fc.metrics.improvement_pct > 0 ? "amber" : "default"}>
-              {fc.metrics.improvement_pct > 0 ? "Up " : ""}
-              beats baseline by {fmt1(fc.metrics.improvement_pct)}%
+            <Chip tone={forecastMetrics.improvement_pct > 0 ? "amber" : "default"}>
+              {forecastMetrics.improvement_pct > 0 ? "Up " : ""}
+              beats baseline by {fmt1(forecastMetrics.improvement_pct)}%
             </Chip>
           )}
         </div>
         {fc ? (
           <>
             <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-              <Metric label="Model MAE" value={fmt1(fc.metrics.model_mae)} />
-              <Metric label="Baseline MAE" value={fmt1(fc.metrics.baseline_mae)} dim />
-              <Metric label="Holdout" value={`${fc.metrics.holdout_days}d`} dim />
+              <Metric label="Model MAE" value={fmt1(forecastMetrics.model_mae)} />
+              <Metric label="Baseline MAE" value={fmt1(forecastMetrics.baseline_mae)} dim />
+              <Metric label="Holdout" value={`${forecastMetrics.holdout_days}d`} dim />
             </div>
             <div className="mt-2.5 border-t border-line pt-2">
               <div className="mb-1 text-[10px] text-mist">

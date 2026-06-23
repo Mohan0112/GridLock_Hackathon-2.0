@@ -327,11 +327,16 @@ def forecast():
             if _has(con, "station_forecast")
             else []
         )
-    metrics = {}
+    metrics = {
+        "model_mae": 0,
+        "baseline_mae": 0,
+        "improvement_pct": 0,
+        "holdout_days": C.FORECAST_HOLDOUT_DAYS,
+    }
     p = os.path.join(ARTIFACTS, "forecast.json")
     if os.path.exists(p):
         with open(p, encoding="utf-8") as f:
-            metrics = json.load(f).get("metrics", {})
+            metrics.update(json.load(f).get("metrics", {}))
     return {"metrics": metrics, "stations": stations}
 
 
