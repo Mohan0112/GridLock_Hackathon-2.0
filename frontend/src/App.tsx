@@ -55,22 +55,55 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    Promise.all([
-      api.kpis().then(setKpis),
-      api.heatmap("impact").then((cells) => {
+    let cancelled = false;
+
+    api
+      .kpis()
+      .then((next) => {
+        if (cancelled) return;
+        setKpis(next);
+        setErr(false);
+      })
+      .catch(() => !cancelled && setErr(true));
+
+    api
+      .heatmap("impact")
+      .then((cells) => {
+        if (cancelled) return;
         setImpactCells(cells);
         setMapCells(cells);
-      }),
-      api.heatmap("blindspot").then(setBlindCells),
-    ]).catch(() => setErr(true));
+        setErr(false);
+      })
+      .catch(() => !cancelled && setErr(true));
+
+    api
+      .heatmap("blindspot")
+      .then((cells) => {
+        if (cancelled) return;
+        setBlindCells(cells);
+        setErr(false);
+      })
+      .catch(() => !cancelled && setErr(true));
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const shift = band === "all" ? undefined : band;
     api
       .heatmap(layer, shift)
-      .then(setMapCells)
-      .catch(() => setErr(true));
+      .then((cells) => {
+        if (cancelled) return;
+        setMapCells(cells);
+        setErr(false);
+      })
+      .catch(() => !cancelled && setErr(true));
+    return () => {
+      cancelled = true;
+    };
   }, [layer, band]);
 
   function cellLookup(cell: string) {
@@ -260,7 +293,7 @@ export default function App() {
 
           {err && (
             <div className="absolute right-4 top-4 rounded-lg border border-stop/50 bg-stop/10 px-3 py-2 text-xs text-stop">
-              API unreachable - start the backend on :8000.
+              API request failed - retrying or waiting for Render to wake.
             </div>
           )}
         </div>
