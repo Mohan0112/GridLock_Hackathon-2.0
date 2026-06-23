@@ -123,16 +123,8 @@ export default function DeployPanel({ beats, shift, onPlan, onSelectBeat }: Prop
 
       {beats.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="text-[10px] text-mist">
-              {beats.length}-beat plan / {shiftLabel}
-            </div>
-            <button
-              onClick={exportCsv}
-              className="rounded border border-line px-2 py-0.5 text-[10px] text-mist transition hover:border-amber/50 hover:text-amber"
-            >
-              CSV
-            </button>
+          <div className="text-[10px] text-mist">
+            {beats.length}-beat plan / {shiftLabel}
           </div>
           {beats.map((b) => (
             <button
@@ -172,6 +164,12 @@ export default function DeployPanel({ beats, shift, onPlan, onSelectBeat }: Prop
               )}
             </button>
           ))}
+          <button
+            onClick={exportCsv}
+            className="mt-3 w-full rounded-md border border-stop bg-stop/15 px-3 py-2.5 font-display text-sm font-semibold text-stop transition hover:bg-stop/25"
+          >
+            Export in CSV format
+          </button>
         </div>
       )}
     </div>
