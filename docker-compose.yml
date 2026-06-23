@@ -1,0 +1,15 @@
+services:
+  gridlock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gridlock:latest
+    ports:
+      - "8000:8000"
+    # Persist the built DuckDB store and read the seed CSV from the host.
+    # Drop your dataset at ./backend/data/raw/violations.csv before first run.
+    volumes:
+      - ./backend/data:/app/backend/data
+    environment:
+      - SEED_CSV=/app/backend/data/raw/violations.csv
+    restart: unless-stopped

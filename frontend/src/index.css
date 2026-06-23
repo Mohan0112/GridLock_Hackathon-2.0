@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: 14 17 22;
+  --panel: 22 27 34;
+  --panel2: 28 35 44;
+  --line: 42 50 61;
+  --mist: 139 151 167;
+  --paper: 232 237 242;
+  color-scheme: dark;
+}
+
+html.light {
+  --ink: 244 246 249;
+  --panel: 255 255 255;
+  --panel2: 237 241 246;
+  --line: 213 221 230;
+  --mist: 90 102 117;
+  --paper: 17 24 32;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: rgb(var(--ink));
+  color: rgb(var(--paper));
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv05" 1, "cv11" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.012em;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--line));
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgb(var(--ink) / 0.7) !important;
+  font-size: 9px !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: rgb(var(--mist)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
