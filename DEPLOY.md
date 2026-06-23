@@ -58,6 +58,22 @@ Invoke-RestMethod https://gridlock-xxxx.onrender.com/api/kpis
 
 Open the Render URL in a browser and confirm the map, KPIs, tabs, theme toggle, and beat planning work.
 
+The boot log should include:
+
+```text
+[boot] database ready (hotspots: 3812 rows)
+```
+
+If the log warns that analytics tables are empty, do not recompute on Render. Commit and push the precomputed local database instead:
+
+```powershell
+git add -f backend/data/gridlock.duckdb
+git commit -m "Ship precomputed analytics database"
+git push
+```
+
+The KPI endpoint should include real values such as `"total_violations":249659`, not `null` or empty data.
+
 ## Notes
 
 - Render provides a `PORT` environment variable. The entrypoint binds Uvicorn to that value, falling back to `8000` for local runs.
