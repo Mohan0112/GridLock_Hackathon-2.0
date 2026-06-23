@@ -14,11 +14,11 @@ const CARTO_LIGHT =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 const INITIAL = {
-  longitude: 77.595,
-  latitude: 12.972,
-  zoom: 11,
-  pitch: 50,
-  bearing: -12,
+  longitude: 77.5946,
+  latitude: 12.9716,
+  zoom: 12,
+  pitch: 45,
+  bearing: -8,
 };
 
 interface Props {
@@ -69,92 +69,108 @@ export default function MapView({
     [cells],
   );
 
-  const layers: any[] = [
-    new H3HexagonLayer({
-      id: "hexes",
-      data: cells,
-      pickable: true,
-      extruded: true,
-      wireframe: true,
-      filled: true,
-      elevationScale: layer === "density" ? 4 : 7,
-      getHexagon: (d: any) => d.cell,
-      getElevation: (d: any) =>
-        layer === "density" ? d.value ?? d.violations : d.value ?? d.impact_score,
-      getFillColor: (d: any) => {
-        const base =
-          layer === "density"
-            ? densityColor(d.value ?? d.violations, maxVol)
-            : impactColor(d.value ?? d.impact_score, maxImpact);
-        return [base[0], base[1], base[2], d.cell === selectedCell ? 255 : 205];
-      },
-      getLineColor: (d: any) =>
-        d.cell === selectedCell
-          ? isLight
-            ? [17, 24, 32, 255]
-            : [232, 237, 242, 255]
-          : isLight
-            ? [255, 255, 255, 130]
-            : [10, 12, 15, 110],
-      updateTriggers: {
-        getFillColor: [layer, maxImpact, maxVol, selectedCell],
-        getElevation: [layer],
-        getLineColor: [selectedCell, theme],
-      },
-      onClick: (info: any) => info?.object?.cell && onSelectCell(info.object.cell),
-    }),
-    showBlind &&
-      new H3HexagonLayer({
-        id: "blind",
-        data: blind,
-        pickable: true,
-        extruded: false,
-        stroked: true,
-        filled: true,
-        getHexagon: (d: any) => d.cell,
-        getFillColor: () => {
-          const c = blindspotColor();
-          return [c[0], c[1], c[2], 60];
-        },
-        getLineColor: () => {
-          const c = blindspotColor();
-          return [c[0], c[1], c[2], 255];
-        },
-        lineWidthMinPixels: 1.5,
-        onClick: (info: any) =>
-          info?.object?.cell && onSelectCell(info.object.cell),
-      }),
-    beats.length > 0 &&
-      new ScatterplotLayer({
-        id: "beat-rings",
-        data: beats,
-        pickable: true,
-        stroked: true,
-        filled: true,
-        getPosition: (d: any) => [d.lon, d.lat],
-        getRadius: 90,
-        radiusMinPixels: 13,
-        radiusMaxPixels: 30,
-        getFillColor: isLight ? [255, 255, 255, 235] : [14, 17, 22, 235],
-        getLineColor: (d: any) =>
-          d.blindspot ? [56, 189, 248, 255] : [242, 179, 61, 255],
-        lineWidthMinPixels: 2.5,
-        onClick: (info: any) =>
-          info?.object?.cell && onSelectCell(info.object.cell),
-      }),
-    beats.length > 0 &&
-      new TextLayer({
-        id: "beat-num",
-        data: beats,
-        getPosition: (d: any) => [d.lon, d.lat],
-        getText: (d: any) => String(d.priority),
-        getSize: 15,
-        getColor: (d: any) =>
-          d.blindspot ? [56, 189, 248, 255] : [242, 179, 61, 255],
-        getTextAnchor: "middle",
-        getAlignmentBaseline: "center",
-      }),
-  ].filter(Boolean);
+  const layers: any[] = useMemo(
+    () =>
+      [
+        new H3HexagonLayer({
+          id: "hexes",
+          data: cells,
+          pickable: true,
+          extruded: true,
+          wireframe: true,
+          filled: true,
+          elevationScale: layer === "density" ? 4 : 7,
+          getHexagon: (d: any) => d.cell,
+          getElevation: (d: any) =>
+            layer === "density" ? d.value ?? d.violations : d.value ?? d.impact_score,
+          getFillColor: (d: any) => {
+            const base =
+              layer === "density"
+                ? densityColor(d.value ?? d.violations, maxVol)
+                : impactColor(d.value ?? d.impact_score, maxImpact);
+            return [base[0], base[1], base[2], d.cell === selectedCell ? 255 : 205];
+          },
+          getLineColor: (d: any) =>
+            d.cell === selectedCell
+              ? isLight
+                ? [17, 24, 32, 255]
+                : [232, 237, 242, 255]
+              : isLight
+                ? [255, 255, 255, 130]
+                : [10, 12, 15, 110],
+          updateTriggers: {
+            getFillColor: [layer, maxImpact, maxVol, selectedCell],
+            getElevation: [layer],
+            getLineColor: [selectedCell, theme],
+          },
+          onClick: (info: any) => info?.object?.cell && onSelectCell(info.object.cell),
+        }),
+        showBlind &&
+          new H3HexagonLayer({
+            id: "blind",
+            data: blind,
+            pickable: true,
+            extruded: false,
+            stroked: true,
+            filled: true,
+            getHexagon: (d: any) => d.cell,
+            getFillColor: () => {
+              const c = blindspotColor();
+              return [c[0], c[1], c[2], 60];
+            },
+            getLineColor: () => {
+              const c = blindspotColor();
+              return [c[0], c[1], c[2], 255];
+            },
+            lineWidthMinPixels: 1.5,
+            onClick: (info: any) =>
+              info?.object?.cell && onSelectCell(info.object.cell),
+          }),
+        beats.length > 0 &&
+          new ScatterplotLayer({
+            id: "beat-rings",
+            data: beats,
+            pickable: true,
+            stroked: true,
+            filled: true,
+            getPosition: (d: any) => [d.lon, d.lat],
+            getRadius: 90,
+            radiusMinPixels: 13,
+            radiusMaxPixels: 30,
+            getFillColor: isLight ? [255, 255, 255, 235] : [14, 17, 22, 235],
+            getLineColor: (d: any) =>
+              d.blindspot ? [56, 189, 248, 255] : [242, 179, 61, 255],
+            lineWidthMinPixels: 2.5,
+            onClick: (info: any) =>
+              info?.object?.cell && onSelectCell(info.object.cell),
+          }),
+        beats.length > 0 &&
+          new TextLayer({
+            id: "beat-num",
+            data: beats,
+            getPosition: (d: any) => [d.lon, d.lat],
+            getText: (d: any) => String(d.priority),
+            getSize: 15,
+            getColor: (d: any) =>
+              d.blindspot ? [56, 189, 248, 255] : [242, 179, 61, 255],
+            getTextAnchor: "middle",
+            getAlignmentBaseline: "center",
+          }),
+      ].filter(Boolean),
+    [
+      beats,
+      blind,
+      cells,
+      isLight,
+      layer,
+      maxImpact,
+      maxVol,
+      onSelectCell,
+      selectedCell,
+      showBlind,
+      theme,
+    ],
+  );
 
   const tipBg = isLight ? "#ffffff" : "#161B22";
   const tipBorder = isLight ? "#D5DDE6" : "#2A323D";
@@ -162,7 +178,7 @@ export default function MapView({
   const tipMuted = isLight ? "#5A6675" : "#8B97A7";
 
   return (
-    <div className="absolute inset-0">
+    <div className="h-full w-full">
       <DeckGL
         viewState={viewState}
         onViewStateChange={(e: any) => setViewState(e.viewState)}

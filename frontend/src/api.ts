@@ -19,38 +19,46 @@ async function request<T>(
   timeoutMs = 15000,
 ): Promise<T> {
   let lastError: unknown;
+  const externalSignal = init?.signal;
+  const { signal: _signal, ...fetchInit } = init ?? {};
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const controller = new AbortController();
+    const onExternalAbort = () => controller.abort();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+      if (externalSignal?.aborted) controller.abort();
+      externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+
       const r = await fetch(`${BASE}${path}`, {
-        ...init,
+        ...fetchInit,
         signal: controller.signal,
       });
       if (!r.ok) throw new Error(`${path} -> ${r.status}`);
       return (await r.json()) as T;
     } catch (err) {
       lastError = err;
+      if (externalSignal?.aborted) break;
       if (attempt === retries) break;
       await sleep(Math.min(12000, 700 * 2 ** attempt));
     } finally {
       window.clearTimeout(timeout);
+      externalSignal?.removeEventListener("abort", onExternalAbort);
     }
   }
 
   throw lastError instanceof Error ? lastError : new Error(`Request failed: ${path}`);
 }
 
-async function get<T>(path: string): Promise<T> {
-  return request<T>(path);
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return request<T>(path, signal ? { signal } : undefined);
 }
 
 export const api = {
   kpis: () => get<Kpis>("/api/kpis"),
-  heatmap: (layer: "impact" | "density" | "blindspot", band?: string) =>
-    get<Cell[]>(`/api/heatmap?layer=${layer}${band ? `&band=${band}` : ""}`),
+  heatmap: (layer: "impact" | "density" | "blindspot", band?: string, signal?: AbortSignal) =>
+    get<Cell[]>(`/api/heatmap?layer=${layer}${band ? `&band=${band}` : ""}`, signal),
   hotspot: (cell: string) => get<HotspotDetail>(`/api/hotspot/${cell}`),
   stationEffort: () => get<StationEffort[]>("/api/station-effort"),
   forecast: () => get<ForecastResp>("/api/forecast"),
