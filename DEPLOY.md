@@ -77,5 +77,6 @@ The KPI endpoint should include real values such as `"total_violations":249659`,
 ## Notes
 
 - Render provides a `PORT` environment variable. The entrypoint binds Uvicorn to that value, falling back to `8000` for local runs.
+- The hosted API is read-only by default. `GRIDLOCK_ENABLE_SCHEDULER=0` prevents the memory-heavy analytics recompute from running on the free instance after startup.
 - Free Render web services sleep after idle time. Open the URL a minute or two before a demo so it wakes up.
 - The app uses an image-baked DuckDB file. Local writes inside the container are not persistent on Render free tier, which is fine for this read-mostly prototype.
